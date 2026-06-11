@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XRPLRPC — Private XRP Ledger Infrastructure</title>
+<link rel="icon" type="image/png" href="images/logo.png">
+<meta property="og:image" content="images/banner.png">
+<meta property="og:title" content="XRPLRPC — Private XRP Ledger Infrastructure">
+<meta property="og:description" content="Private XRPL RPC endpoints, wallet alerts, VPN and uptime monitoring.">
 <meta name="description" content="Private XRPL RPC endpoints, wallet alert bots, VPN and uptime monitoring. Infrastructure built for XRP Ledger developers and holders.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -13,7 +17,7 @@
     --bg: #0a0c0f; --bg2: #0f1218; --bg3: #141820;
     --border: rgba(255,255,255,0.07); --border-bright: rgba(255,255,255,0.15);
     --text: #e8eaed; --muted: #6b7280;
-    --xrp: #00c4b4; --xrp-dim: rgba(0,196,180,0.12); --xrp-border: rgba(0,196,180,0.3);
+    --xrp: #00aaff; --xrp-dim: rgba(0,170,255,0.12); --xrp-border: rgba(0,170,255,0.3);
     --amber: #f59e0b; --blue: #3b82f6; --green: #10b981;
     --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
   }
@@ -137,9 +141,7 @@
 <body>
 
 <nav>
-  <a class="nav-logo" href="https://xrplrpc.online">
-    XRPLRPC //
-  </a>
+  <a class="nav-logo" href="https://xrplrpc.online"><img src="images/logo.png" alt="XRPLRPC" style="width:32px;height:32px;border-radius:50%;object-fit:cover"> XRPLRPC //</a>
   <ul class="nav-links">
     <li><a href="#services">services</a></li>
     <li><a href="#pricing">pricing</a></li>
@@ -169,6 +171,7 @@
       </div>
     </div>
     <div>
+      <img src="images/banner.png" alt="XRPLRPC.online" style="width:100%;border-radius:10px;margin-bottom:1.25rem">
       <div class="ledger-widget">
         <div class="ledger-header"><span style="color:var(--xrp)">live ledger feed</span><span style="color:var(--green)">● synced</span></div>
         <div class="ledger-rows" id="ledger-rows">
@@ -247,7 +250,7 @@
           <li>Threshold filters</li>
           <li>Powered by dedicated node</li>
         </ul>
-        <a href="https://t.me/xrplrpcbot" class="service-link" target="_blank">Open Telegram bot</a>
+        <a href="https://t.me/xrplrpcbot" class="service-link" target="_blank"><img src="images/telegram.png" alt="Telegram" style="width:16px;height:16px;border-radius:50%;vertical-align:middle;margin-right:4px">Open Telegram bot</a>
       </div>
       <div class="service-card">
         <div class="service-tag tag-live">live</div>
