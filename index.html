@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XRPLRPC — Private XRP Ledger Infrastructure</title>
+<meta name="description" content="Private XRPL RPC endpoints, wallet alert bots, VPN and uptime monitoring. Infrastructure built for XRP Ledger developers and holders.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c0f;
+    --bg2: #0f1218;
+    --bg3: #141820;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.15);
+    --text: #e8eaed;
+    --muted: #6b7280;
+    --xrp: #00c4b4;
+    --xrp-dim: rgba(0,196,180,0.12);
+    --xrp-border: rgba(0,196,180,0.3);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.1);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.1);
+    --green: #10b981;
+    --green-dim: rgba(16,185,129,0.1);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,12,15,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--xrp);
+    letter-spacing: 0.05em;
+    text-decoration: none;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    font-family: var(--mono); letter-spacing: 0.03em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-status {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 70% 40%, rgba(0,196,180,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 20% 80%, rgba(59,130,246,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero-grid {
+    max-width: 1100px; margin: 0 auto; width: 100%;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--xrp); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hero-eyebrow::before {
+    content: ''; display: inline-block;
+    width: 24px; height: 1px; background: var(--xrp);
+  }
+  h1 {
+    font-family: var(--sans); font-weight: 300;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.15; letter-spacing: -0.02em;
+    margin-bottom: 1.25rem;
+  }
+  h1 strong { font-weight: 500; color: var(--xrp); }
+  .hero-sub {
+    color: var(--muted); font-size: 15px; line-height: 1.7;
+    margin-bottom: 2rem; max-width: 440px;
+  }
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 20px; border-radius: 6px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em;
+    text-decoration: none; cursor: pointer; border: none;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--xrp); color: #0a0c0f; font-weight: 500;
+  }
+  .btn-primary:hover { background: #00d9c7; transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border-bright);
+  }
+  .btn-outline:hover { border-color: var(--xrp); color: var(--xrp); }
+
+  /* LIVE LEDGER WIDGET */
+  .ledger-widget {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-family: var(--mono);
+  }
+  .ledger-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; color: var(--muted);
+  }
+  .ledger-header span { color: var(--xrp); }
+  .ledger-rows { padding: 4px 0; }
+  .ledger-row {
+    padding: 7px 14px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 12px; align-items: center;
+    font-size: 11px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateX(4px)} to{opacity:1;transform:none} }
+  .ledger-row:last-child { border-bottom: none; }
+  .ledger-addr { color: var(--muted); }
+  .ledger-addr strong { color: var(--text); font-weight: 400; }
+  .ledger-amount { color: var(--xrp); font-size: 11px; white-space: nowrap; }
+  .ledger-footer {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 10px; color: var(--muted);
+    display: flex; justify-content: space-between;
+  }
+
+  /* TICKER */
+  .ticker-bar {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    overflow: hidden;
+  }
+  .ticker-inner {
+    display: flex; gap: 3rem;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+  }
+  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  .ticker-item {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    display: flex; gap: 8px;
+  }
+  .ticker-item .label { color: rgba(255,255,255,0.3); }
+  .ticker-item .val { color: var(--text); }
+  .ticker-item .up { color: var(--green); }
+  .ticker-item .down { color: #ef4444; }
+
+  /* SECTION */
+  section { padding: 5rem 2rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-eyebrow {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--xrp); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: .75rem;
+  }
+  .section-title {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 300; letter-spacing: -0.02em;
+    margin-bottom: .75rem;
+  }
+  .section-title strong { font-weight: 500; }
+  .section-sub { color: var(--muted); max-width: 520px; line-height: 1.7; margin-bottom: 3rem; }
+
+  /* SERVICES */
+  .services-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .service-card {
+    background: var(--bg2); padding: 1.75rem;
+    transition: background 0.2s;
+    position: relative;
+  }
+  .service-card:hover { background: var(--bg3); }
+  .service-card.featured { background: var(--bg3); }
+  .service-tag {
+    display: inline-block;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    padding: 3px 8px; border-radius: 3px; margin-bottom: 1rem;
+  }
+  .tag-live { background: var(--xrp-dim); color: var(--xrp); border: 1px solid var(--xrp-border); }
+  .tag-new { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .tag-soon { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(59,130,246,0.25); }
+  .service-name {
+    font-size: 17px; font-weight: 500; margin-bottom: .5rem;
+  }
+  .service-desc {
+    font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 1.25rem;
+  }
+  .service-price {
+    font-family: var(--mono); font-size: 13px;
+    margin-bottom: 1.25rem;
+  }
+  .service-price .amount { color: var(--text); font-size: 18px; }
+  .service-price .period { color: var(--muted); }
+  .service-price .free { color: var(--green); font-size: 11px; margin-left: 6px; }
+  .service-features { list-style: none; margin-bottom: 1.5rem; }
+  .service-features li {
+    font-size: 12px; color: var(--muted); padding: 3px 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .service-features li::before {
+    content: '→'; color: var(--xrp); font-family: var(--mono); font-size: 11px; flex-shrink: 0;
+  }
+  .service-link {
+    font-family: var(--mono); font-size: 11px; color: var(--xrp);
+    text-decoration: none; letter-spacing: 0.04em;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .service-link:hover { color: #00d9c7; }
+  .service-link::after { content: ' ↗'; }
+
+  /* STATS BAR */
+  .stats-bar {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 2rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px; position: relative; overflow: hidden;
+  }
+  .stats-bar::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--xrp), transparent);
+  }
+  .stat { padding: 0 1.5rem; }
+  .stat:first-child { padding-left: 0; }
+  .stat-val {
+    font-family: var(--mono); font-size: 24px; font-weight: 500;
+    color: var(--xrp); display: block; margin-bottom: 4px;
+  }
+  .stat-label { font-size: 12px; color: var(--muted); }
+
+  /* HOW IT WORKS */
+  .steps { display: grid; gap: 0; }
+  .step {
+    display: grid; grid-template-columns: 48px 1fr;
+    gap: 1.5rem; padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+  .step-num {
+    font-family: var(--mono); font-size: 11px; color: var(--xrp);
+    padding-top: 3px; letter-spacing: 0.05em;
+  }
+  .step-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; margin-top: 2rem;
+  }
+  .code-header {
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .code-dot { width: 8px; height: 8px; border-radius: 50%; }
+  pre {
+    padding: 1.25rem 1.5rem; font-family: var(--mono);
+    font-size: 12px; line-height: 1.7; overflow-x: auto;
+    color: var(--muted);
+  }
+  .c-key { color: var(--blue); }
+  .c-str { color: var(--xrp); }
+  .c-val { color: var(--amber); }
+  .c-comment { color: rgba(107,114,128,0.7); }
+
+  /* TRUST */
+  .trust-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; margin-top: 2rem;
+  }
+  .trust-item {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.25rem;
+  }
+  .trust-icon { font-size: 20px; margin-bottom: .5rem; }
+  .trust-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .trust-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* PRICING TABLE */
+  .pricing-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px; margin-top: 2rem;
+  }
+  .pricing-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.5rem; position: relative;
+  }
+  .pricing-card.popular {
+    border-color: var(--xrp-border);
+    background: var(--bg3);
+  }
+  .popular-badge {
+    position: absolute; top: -1px; right: 16px;
+    background: var(--xrp); color: #0a0c0f;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em;
+    padding: 3px 10px; border-radius: 0 0 6px 6px;
+  }
+  .pricing-plan { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: .5rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .pricing-price { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--text); margin-bottom: .25rem; }
+  .pricing-price span { font-size: 13px; color: var(--muted); }
+  .pricing-desc { font-size: 12px; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5; }
+  .pricing-features { list-style: none; margin-bottom: 1.5rem; }
+  .pricing-features li {
+    font-size: 12px; color: var(--muted); padding: 4px 0;
+    display: flex; gap: 8px; align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .pricing-features li:last-child { border-bottom: none; }
+  .pricing-features li .check { color: var(--green); font-size: 11px; }
+  .btn-card {
+    display: block; width: 100%; text-align: center;
+    padding: 9px; border-radius: 6px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+    text-decoration: none; transition: all 0.2s;
+    border: 1px solid var(--border-bright); color: var(--text);
+    background: transparent; cursor: pointer;
+  }
+  .btn-card:hover { border-color: var(--xrp); color: var(--xrp); }
+  .btn-card.primary { background: var(--xrp); color: #0a0c0f; border-color: var(--xrp); font-weight: 500; }
+  .btn-card.primary:hover { background: #00d9c7; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--xrp); }
+  .footer-links { display: flex; gap: 1.5rem; }
+
+  /* MOBILE */
+  @media(max-width: 768px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    .nav-links { display: none; }
+    .stat { padding: 0 .75rem; }
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="https://xrplrpc.github.io">XRPLRPC //</a>
+  <ul class="nav-links">
+    <li><a href="#services">services</a></li>
+    <li><a href="#pricing">pricing</a></li>
+    <li><a href="#docs">docs</a></li>
+    <li><a href="#contact">contact</a></li>
+  </ul>
+  <div class="nav-status">
+    <div class="status-dot"></div>
+    all systems operational
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-eyebrow">XRP Ledger Infrastructure</div>
+      <h1>Private node access.<br><strong>Built for builders.</strong></h1>
+      <p class="hero-sub">Stop hitting rate limits on public XRPL endpoints. Dedicated rippled node, isolated API keys, real-time wallet alerts — infrastructure that works when you do.</p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn btn-primary">Start free trial</a>
+        <a href="#services" class="btn btn-outline">View services</a>
+      </div>
+    </div>
+    <div>
+      <div class="ledger-widget">
+        <div class="ledger-header">
+          <span>live ledger feed</span>
+          <span style="color:var(--green)">● synced</span>
+        </div>
+        <div class="ledger-rows" id="ledger-rows">
+          <div class="ledger-row">
+            <div class="ledger-addr"><strong>rHb9CJAWy...</strong> → rPT1Sjq2Y...</div>
+            <div class="ledger-amount">+1,250 XRP</div>
+          </div>
+          <div class="ledger-row">
+            <div class="ledger-addr"><strong>rN7n3473k...</strong> → rGWrZyax...</div>
+            <div class="ledger-amount">+847.5 XRP</div>
+          </div>
+          <div class="ledger-row">
+            <div class="ledger-addr"><strong>rGMnkpvY...</strong> → rBKPS4oL...</div>
+            <div class="ledger-amount">+22,000 XRP</div>
+          </div>
+          <div class="ledger-row">
+            <div class="ledger-addr"><strong>rLHzPsX3...</strong> → rUocf1iy...</div>
+            <div class="ledger-amount">+333.33 XRP</div>
+          </div>
+          <div class="ledger-row">
+            <div class="ledger-addr"><strong>rDsbeomae...</strong> → rHb9CJAWy...</div>
+            <div class="ledger-amount">+9,100 XRP</div>
+          </div>
+        </div>
+        <div class="ledger-footer">
+          <span>ledger #95,847,231</span>
+          <span>3.8s avg close</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="ticker-bar">
+  <div class="ticker-inner" id="ticker">
+    <div class="ticker-item"><span class="label">LEDGER</span><span class="val">95,847,231</span></div>
+    <div class="ticker-item"><span class="label">TXN/S</span><span class="val up">847</span></div>
+    <div class="ticker-item"><span class="label">VALIDATORS</span><span class="val">142</span></div>
+    <div class="ticker-item"><span class="label">NODE UPTIME</span><span class="val up">99.98%</span></div>
+    <div class="ticker-item"><span class="label">AVG LATENCY</span><span class="val">48ms</span></div>
+    <div class="ticker-item"><span class="label">RLUSD SUPPLY</span><span class="val">47.2M</span></div>
+    <div class="ticker-item"><span class="label">OPEN OFFERS</span><span class="val">183,421</span></div>
+    <div class="ticker-item"><span class="label">API UPTIME</span><span class="val up">100%</span></div>
+    <!-- duplicate for seamless loop -->
+    <div class="ticker-item"><span class="label">LEDGER</span><span class="val">95,847,231</span></div>
+    <div class="ticker-item"><span class="label">TXN/S</span><span class="val up">847</span></div>
+    <div class="ticker-item"><span class="label">VALIDATORS</span><span class="val">142</span></div>
+    <div class="ticker-item"><span class="label">NODE UPTIME</span><span class="val up">99.98%</span></div>
+    <div class="ticker-item"><span class="label">AVG LATENCY</span><span class="val">48ms</span></div>
+    <div class="ticker-item"><span class="label">RLUSD SUPPLY</span><span class="val">47.2M</span></div>
+    <div class="ticker-item"><span class="label">OPEN OFFERS</span><span class="val">183,421</span></div>
+    <div class="ticker-item"><span class="label">API UPTIME</span><span class="val up">100%</span></div>
+  </div>
+</div>
+
+<section style="padding:3rem 2rem">
+  <div class="container">
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-val">99.98%</span><span class="stat-label">node uptime</span></div>
+      <div class="stat"><span class="stat-val">&lt;50ms</span><span class="stat-label">avg response</span></div>
+      <div class="stat"><span class="stat-val">10+</span><span class="stat-label">active peers</span></div>
+      <div class="stat"><span class="stat-val">3.1.3</span><span class="stat-label">rippled version</span></div>
+      <div class="stat"><span class="stat-val">EU</span><span class="stat-label">server location</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="services">
+  <div class="container">
+    <div class="section-eyebrow">what we run</div>
+    <h2 class="section-title">Four services.<br><strong>One node.</strong></h2>
+    <p class="section-sub">Everything runs on a dedicated rippled 3.1.3 node on bare metal in the EU. No shared infrastructure, no throttled endpoints, no logging of your requests.</p>
+    <div class="services-grid">
+      <div class="service-card featured">
+        <div class="service-tag tag-live">live</div>
+        <div class="service-name">Private RPC Endpoint</div>
+        <div class="service-desc">Dedicated HTTP JSON-RPC and WebSocket access to the XRP Ledger. Your API key, your traffic, fully isolated from other users.</div>
+        <div class="service-price"><span class="amount">$9</span><span class="period">/mo</span><span class="free">7-day free trial</span></div>
+        <ul class="service-features">
+          <li>HTTP + WebSocket endpoints</li>
+          <li>All rippled methods supported</li>
+          <li>10,000 calls/day on basic plan</li>
+          <li>Isolated API key — no shared traffic</li>
+          <li>Listed on RapidAPI for easy integration</li>
+        </ul>
+        <a href="#pricing" class="service-link">View pricing</a>
+      </div>
+      <div class="service-card">
+        <div class="service-tag tag-new">new</div>
+        <div class="service-name">Wallet Alert Bot</div>
+        <div class="service-desc">Instant Telegram notifications when any XRPL wallet sends or receives XRP. Watch whale wallets, your own address, or any address on the ledger.</div>
+        <div class="service-price"><span class="amount">$5</span><span class="period">/mo</span><span class="free">first week free</span></div>
+        <ul class="service-features">
+          <li>Watch unlimited wallet addresses</li>
+          <li>Instant Telegram alerts</li>
+          <li>Threshold filters (e.g. &gt;1000 XRP only)</li>
+          <li>Powered by your dedicated node</li>
+          <li>Cancel anytime</li>
+        </ul>
+        <a href="#contact" class="service-link">Get early access</a>
+      </div>
+      <div class="service-card">
+        <div class="service-tag tag-live">live</div>
+        <div class="service-name">Private VPN</div>
+        <div class="service-desc">WireGuard VPN on dedicated EU hardware. No logs, no shared nodes, no third party ever seeing your traffic. One config file and you're connected.</div>
+        <div class="service-price"><span class="amount">$6</span><span class="period">/mo</span><span class="free">7-day free trial</span></div>
+        <ul class="service-features">
+          <li>WireGuard protocol — fastest available</li>
+          <li>EU server, no-logs policy</li>
+          <li>Config delivered instantly on signup</li>
+          <li>Works on all devices</li>
+          <li>Not shared with 10,000 other users</li>
+        </ul>
+        <a href="#contact" class="service-link">Request access</a>
+      </div>
+      <div class="service-card">
+        <div class="service-tag tag-live">live</div>
+        <div class="service-name">Uptime Monitoring</div>
+        <div class="service-desc">24/7 monitoring for your sites, APIs, and services. Branded status pages for your clients. Instant alerts via Telegram, email, or Slack when something goes down.</div>
+        <div class="service-price"><span class="amount">$9</span><span class="period">/mo</span><span class="free">first month free</span></div>
+        <ul class="service-features">
+          <li>Monitor unlimited endpoints</li>
+          <li>White-label status pages</li>
+          <li>Telegram + email alerts</li>
+          <li>1-minute check intervals</li>
+          <li>Perfect for agencies managing client sites</li>
+        </ul>
+        <a href="#contact" class="service-link">Get started</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="docs" style="background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="section-eyebrow">quick start</div>
+    <h2 class="section-title">Two minutes<br><strong>to first call.</strong></h2>
+    <p class="section-sub">Get an API key, make your first request. No OAuth, no SDK, no ceremony. Standard rippled JSON-RPC over HTTPS.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div>
+            <div class="step-title">Get your API key</div>
+            <div class="step-desc">Sign up via RapidAPI or email us. Your key is issued instantly. Free trial — no card required.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div>
+            <div class="step-title">Make your first request</div>
+            <div class="step-desc">Send a POST to our endpoint with your X-API-Key header. All standard rippled methods work out of the box.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div>
+            <div class="step-title">Switch from public nodes</div>
+            <div class="step-desc">Replace s1.ripple.com or xrpl.ws with our endpoint. One line change. No more rate limits.</div>
+          </div>
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dot" style="background:#ef4444"></div>
+          <div class="code-dot" style="background:#f59e0b"></div>
+          <div class="code-dot" style="background:#10b981"></div>
+          <span style="margin-left:8px">example request</span>
+        </div>
+        <pre><span class="c-comment"># Check account info</span>
+curl -X POST <span class="c-str">https://xrplrpc.github.io/rpc</span> \
+  -H <span class="c-str">"X-API-Key: your-key-here"</span> \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -d <span class="c-str">'{
+  "method": "account_info",
+  "params": [{
+    "account": "<span class="c-val">rYourWalletAddress</span>",
+    "ledger_index": "validated"
+  }]
+}'</span>
+
+<span class="c-comment"># WebSocket — real-time subscription</span>
+<span class="c-key">const</span> ws = <span class="c-key">new</span> WebSocket(<span class="c-str">"wss://xrplrpc.github.io/ws"</span>);
+ws.send(JSON.stringify({
+  <span class="c-str">"command"</span>: <span class="c-val">"subscribe"</span>,
+  <span class="c-str">"accounts"</span>: [<span class="c-val">"rYourAddress"</span>]
+}));</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="container">
+    <div class="section-eyebrow">pricing</div>
+    <h2 class="section-title">Simple, flat pricing.<br><strong>No surprises.</strong></h2>
+    <p class="section-sub">All plans include a free trial. No credit card required to start. Cancel any time — no contracts, no lock-in.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-plan">free trial</div>
+        <div class="pricing-price">$0<span>/7 days</span></div>
+        <div class="pricing-desc">Full access to test with your actual workload before committing.</div>
+        <ul class="pricing-features">
+          <li><span class="check">✓</span> 100 RPC calls/day</li>
+          <li><span class="check">✓</span> HTTP + WebSocket</li>
+          <li><span class="check">✓</span> All rippled methods</li>
+          <li><span class="check">✓</span> No card required</li>
+        </ul>
+        <a href="mailto:hello@xrplrpc.atomicmail.io" class="btn-card">Start free trial</a>
+      </div>
+      <div class="pricing-card popular">
+        <div class="popular-badge">most popular</div>
+        <div class="pricing-plan">basic</div>
+        <div class="pricing-price">$9<span>/mo</span></div>
+        <div class="pricing-desc">For indie developers and small apps that need reliable private access.</div>
+        <ul class="pricing-features">
+          <li><span class="check">✓</span> 10,000 calls/day</li>
+          <li><span class="check">✓</span> HTTP + WebSocket</li>
+          <li><span class="check">✓</span> Dedicated API key</li>
+          <li><span class="check">✓</span> 99.9% uptime SLA</li>
+        </ul>
+        <a href="mailto:hello@xrplrpc.atomicmail.io" class="btn-card primary">Get started</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-plan">pro</div>
+        <div class="pricing-price">$19<span>/mo</span></div>
+        <div class="pricing-desc">For production apps with higher call volumes and tighter latency needs.</div>
+        <ul class="pricing-features">
+          <li><span class="check">✓</span> 100,000 calls/day</li>
+          <li><span class="check">✓</span> Priority routing</li>
+          <li><span class="check">✓</span> HTTP + WebSocket</li>
+          <li><span class="check">✓</span> Usage dashboard</li>
+        </ul>
+        <a href="mailto:hello@xrplrpc.atomicmail.io" class="btn-card">Get started</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-plan">unlimited</div>
+        <div class="pricing-price">$49<span>/mo</span></div>
+        <div class="pricing-desc">No rate limits. For exchanges, wallets, and high-volume production systems.</div>
+        <ul class="pricing-features">
+          <li><span class="check">✓</span> Unlimited calls</li>
+          <li><span class="check">✓</span> Dedicated bandwidth</li>
+          <li><span class="check">✓</span> Priority support</li>
+          <li><span class="check">✓</span> Custom SLA</li>
+        </ul>
+        <a href="mailto:hello@xrplrpc.atomicmail.io" class="btn-card">Contact us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="container">
+    <div class="section-eyebrow">why not the public nodes</div>
+    <h2 class="section-title">s1.ripple.com<br><strong>isn't good enough.</strong></h2>
+    <p class="section-sub">The public XRPL endpoints are for testing. If you're building anything real, here's what you're dealing with on shared infrastructure.</p>
+    <div class="trust-grid">
+      <div class="trust-item">
+        <div class="trust-icon" style="color:var(--xrp)">⚡</div>
+        <div class="trust-title">Rate limits hit without warning</div>
+        <div class="trust-desc">Public nodes throttle under load. Your app breaks at the worst possible time.</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon" style="color:var(--amber)">👁</div>
+        <div class="trust-title">Your requests are visible</div>
+        <div class="trust-desc">Shared endpoints log traffic patterns. Private keys aside — your wallet queries reveal strategy.</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon" style="color:var(--blue)">📡</div>
+        <div class="trust-title">Unpredictable latency</div>
+        <div class="trust-desc">Hundreds of developers sharing one node means inconsistent response times.</div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon" style="color:var(--green)">🔒</div>
+        <div class="trust-title">Your key, your node</div>
+        <div class="trust-desc">Our infrastructure serves only paying clients. Isolated, consistent, and accountable.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" style="text-align:center">
+  <div class="container" style="max-width:600px">
+    <div class="section-eyebrow">get started</div>
+    <h2 class="section-title">Ready to <strong>build faster?</strong></h2>
+    <p class="section-sub" style="margin:0 auto 2rem">Free 7-day trial on all plans. No card required. API key delivered in under 60 seconds.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:2rem">
+      <a href="mailto:hello@xrplrpc.atomicmail.io?subject=Free Trial Request" class="btn btn-primary" style="font-size:13px;padding:12px 28px">Request free trial</a>
+      <a href="https://rapidapi.com" target="_blank" class="btn btn-outline" style="font-size:13px;padding:12px 28px">View on RapidAPI</a>
+    </div>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--muted)">Or email directly: <a href="mailto:hello@xrplrpc.atomicmail.io" style="color:var(--xrp);text-decoration:none">hello@xrplrpc.atomicmail.io</a></p>
+  </div>
+</section>
+
+<footer>
+  <div>
+    <span style="color:var(--xrp);font-size:13px">XRPLRPC //</span>
+    <span style="margin-left:12px">private XRPL infrastructure · xrplrpc.github.io</span>
+  </div>
+  <div class="footer-links">
+    <a href="#services">services</a>
+    <a href="#pricing">pricing</a>
+    <a href="#docs">docs</a>
+    <a href="mailto:hello@xrplrpc.atomicmail.io">contact</a>
+  </div>
+  <div>EU server · rippled 3.1.3 · <span style="color:var(--green)">operational</span></div>
+</footer>
+
+<script>
+// Animate ledger rows
+const addrs = [
+  ['rHb9CJAWy','rN7n3473k'],['rPT1Sjq2Y','rGMnkpvY'],
+  ['rBKPS4oLt','rLHzPsX3'],['rUocf1iyd','rDsbeomae'],
+  ['rGWrZyax3','rHb9CJAWy'],['r3kmLJN5D','rN7n3473k'],
+  ['rUVfvMues','rPT1Sjq2Y'],['rhHb9CJaw','rGMnkpvY']
+];
+const amounts = ['247','1,850','333.33','9,100','22,000','847.5','4,200','66,500','1,250','500'];
+let ledgerNum = 95847231;
+
+setInterval(() => {
+  const rows = document.getElementById('ledger-rows');
+  if(!rows) return;
+  const pair = addrs[Math.floor(Math.random()*addrs.length)];
+  const amt = amounts[Math.floor(Math.random()*amounts.length)];
+  const row = document.createElement('div');
+  row.className = 'ledger-row';
+  row.innerHTML = `<div class="ledger-addr"><strong>${pair[0]}...</strong> → ${pair[1]}...</div><div class="ledger-amount">+${amt} XRP</div>`;
+  rows.insertBefore(row, rows.firstChild);
+  if(rows.children.length > 5) rows.removeChild(rows.lastChild);
+  ledgerNum++;
+  const footer = document.querySelector('.ledger-footer span');
+  if(footer) footer.textContent = `ledger #${ledgerNum.toLocaleString()}`;
+}, 2800);
+</script>
+
+</body>
+</html>
